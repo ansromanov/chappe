@@ -32,9 +32,9 @@ next patch version.
 ## Once, before the first release
 
 - In the settings of the repository, require the check **CI passed** on `main`.
-- A package made by a workflow is private at first. After the first release, open each of the two
-  packages (`chappe-bus` and `charts/chappe-bus`) under the profile or organization, change the
-  visibility to public and link them to the repository.
+- The image and the chart are linked to the repository and were public from the first release
+  (v0.1.0). If a new package ever comes out private, change its visibility in the settings of the
+  package and link it to the repository.
 - Dependabot opens pull requests for Cargo, GitHub Actions and the Dockerfile every week; the
   `Audit` workflow checks the dependencies against RustSec.
 
