@@ -1,0 +1,14 @@
+apiVersion: v2
+name: chappe-bus
+description: Coordination service for AI coding agents
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+home: https://github.com/ansromanov/chappe
+sources:
+  - https://github.com/ansromanov/chappe
+keywords:
+  - ai-agents
+  - coordination
+  - claude-code
+  - codex

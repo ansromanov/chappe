@@ -1,0 +1,15 @@
+# The image of a release: the binaries are built (and tested) by the release workflow, so
+# nothing is compiled here and both platforms are made without emulation.
+# The build context holds bin/amd64/chappe-bus, bin/arm64/chappe-bus and an empty data/.
+FROM scratch
+ARG TARGETARCH
+LABEL org.opencontainers.image.title="chappe-bus" \
+      org.opencontainers.image.description="Coordination service for AI coding agents" \
+      org.opencontainers.image.licenses="MIT OR Apache-2.0"
+COPY bin/${TARGETARCH}/chappe-bus /chappe-bus
+# The data volume is mounted at /data; the service creates its database there.
+COPY --chown=65534:65534 data /data
+ENV CHAPPE_DB=/data/chappe-bus.db
+USER 65534:65534
+EXPOSE 8080
+ENTRYPOINT ["/chappe-bus"]

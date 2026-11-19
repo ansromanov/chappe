@@ -1,0 +1,33 @@
+# chappe-bus with Docker Compose.
+#   mkdir -p tokens && openssl rand -hex 32 > tokens/laptop.claude   # one file per <machine>.<tool>
+#   docker compose up -d
+# The service listens on 8080. Put TLS and the sign-in of the owner's page in front of it
+# (see deploy/README.md): the page has no sign-in of its own.
+services:
+  chappe-bus:
+    image: ghcr.io/ansromanov/chappe-bus:latest
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:8080"
+    environment:
+      CHAPPE_TOKENS_DIR: /etc/chappe/tokens
+      CHAPPE_PROJECTS: all
+      # CHAPPE_FORGE_URL: https://git.example.com
+      # CHAPPE_WEBHOOK_SECRET_FILE: /run/secrets/webhook
+    volumes:
+      - ./tokens:/etc/chappe/tokens:ro
+      - data:/data
+    # secrets:
+    #   - webhook
+    read_only: true
+    user: "65534:65534"
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  data:
+
+# secrets:
+#   webhook:
+#     file: ./webhook-secret

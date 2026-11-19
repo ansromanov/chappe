@@ -1,0 +1,8 @@
+# Fake values used by the tests; they are not secrets.
+[allowlist]
+description = "test fixtures"
+regexes = [
+  '''0123456789abcdef0123''',
+  '''dev-token-0123456789abcdef0123456789abcdef''',
+]
+paths = ['''crates/chappe-bus/src/registry\.rs''']

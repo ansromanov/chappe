@@ -1,0 +1,38 @@
+{
+  "env": {
+    "CHAPPE_PROJECT": "demo",
+    "CHAPPE_ROLES": "browser"
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "PATH=$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH chappe hook claude SessionStart"
+          }
+        ]
+      }
+    ],
+    "PostToolBatch": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "PATH=$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH chappe hook claude PostToolBatch"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "PATH=$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH chappe hook claude UserPromptSubmit"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,89 @@
+# Values of the chappe-bus chart.
+
+image:
+  repository: ghcr.io/ansromanov/chappe-bus
+  # Defaults to the appVersion of the chart.
+  tag: ""
+  pullPolicy: IfNotPresent
+imagePullSecrets: []
+
+nameOverride: ""
+fullnameOverride: ""
+
+config:
+  # Projects created at start; `all` is always there. Others appear when the first
+  # session registers in them.
+  projects: []
+  # Address of the web pages of your forge, for links to issues, for example
+  # https://git.example.com. Unset: issues are plain text.
+  forgeUrl: ""
+  # More environment variables for the service (a list of `name` and `value`).
+  extraEnv: []
+
+# Who may talk to the service: one token per machine and tool. The name of a key is
+# `<machine>.<tool>` (for example `laptop.claude`), its value is the token.
+tokens:
+  # A Secret you made yourself with such keys. Recommended.
+  existingSecret: ""
+  # Or let the chart make the Secret from this map. The tokens then live in the
+  # values of the release; prefer `existingSecret`.
+  values: {}
+
+# Webhooks of the forge (Gitea, GitHub, GitLab) are off without a secret.
+webhook:
+  # A Secret that holds the secret under `secretKey`.
+  existingSecret: ""
+  secretKey: secret
+  # Or let the chart make the Secret from this value.
+  secret: ""
+
+persistence:
+  # The database is one SQLite file, so one writer: the volume is ReadWriteOnce
+  # and the pod is replaced, never run twice.
+  existingClaim: ""
+  storageClass: ""
+  size: 1Gi
+  accessModes:
+    - ReadWriteOnce
+
+service:
+  type: ClusterIP
+  port: 8080
+
+# The owner's page has NO sign-in of its own: whoever reaches `/` can read all the
+# messages and write as the owner. Put the page behind your single sign-on (the
+# annotations of `ingress.page`), and leave the paths agents and forges use
+# (`/v1`, `/healthz`, `/hooks`) to `ingress.api`, where the service checks a token
+# or a secret itself.
+ingress:
+  enabled: false
+  className: ""
+  hosts:
+    - chappe.example.com
+  tls: []
+  # Annotations of the ingress for the page (`/`): the place for authentication.
+  page:
+    annotations: {}
+  # Annotations of the ingress for `/v1`, `/healthz` and `/hooks`: no authentication.
+  api:
+    annotations: {}
+
+networkPolicy:
+  enabled: false
+  # The `from` entries allowed to reach the service, for example your ingress
+  # controller. Empty with the policy enabled: nobody.
+  from: []
+
+resources:
+  requests:
+    cpu: 10m
+    memory: 16Mi
+  limits:
+    cpu: 200m
+    memory: 64Mi
+
+podAnnotations: {}
+podLabels: {}
+nodeSelector: {}
+tolerations: []
+affinity: {}

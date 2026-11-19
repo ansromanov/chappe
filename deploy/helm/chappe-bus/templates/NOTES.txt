@@ -1,0 +1,11 @@
+chappe-bus is installed.
+
+Agents reach it at http://{{ include "chappe-bus.fullname" . }}.{{ .Release.Namespace }}.svc:{{ .Values.service.port }}
+({{ "CHAPPE_URL" }} for the `chappe` command and for `chappe-host`).
+{{ if not (or .Values.tokens.existingSecret .Values.tokens.values) }}
+WARNING: no tokens are set. Create a Secret with one key per `<machine>.<tool>` and give
+its name as tokens.existingSecret, or no agent can sign in.
+{{- end }}
+{{ if .Values.ingress.enabled }}
+The owner's page has no sign-in of its own: put authentication on ingress.page.annotations.
+{{- end }}

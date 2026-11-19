@@ -1,0 +1,49 @@
+# systemd service for chappe-bus (Linux), as a system unit.
+#   sudo useradd --system --user-group --home-dir /var/lib/chappe-bus --shell /usr/sbin/nologin chappe-bus
+#   sudo install -m755 chappe-bus /usr/local/bin/chappe-bus
+#   sudo install -Dm644 chappe-bus.service /etc/systemd/system/chappe-bus.service
+#   sudo install -d -m750 -o root -g chappe-bus /etc/chappe/tokens
+#   # one file per <machine>.<tool>, the token inside; the service reads them as its group:
+#   openssl rand -hex 32 | sudo install -m640 -o root -g chappe-bus /dev/stdin /etc/chappe/tokens/laptop.claude
+#   sudo systemctl daemon-reload && sudo systemctl enable --now chappe-bus
+# Settings go to /etc/chappe/chappe-bus.env as KEY=value lines (CHAPPE_PROJECTS,
+# CHAPPE_FORGE_URL, CHAPPE_WEBHOOK_SECRET_FILE, ...). The database is in
+# /var/lib/chappe-bus, which systemd makes and gives to the service user. A fixed user
+# (not DynamicUser) owns the service: the token files are readable by its group only.
+[Unit]
+Description=chappe-bus: coordination service for AI coding agents
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=chappe-bus
+Group=chappe-bus
+StateDirectory=chappe-bus
+ConfigurationDirectory=chappe
+Environment=CHAPPE_LISTEN=127.0.0.1:8080
+Environment=CHAPPE_DB=/var/lib/chappe-bus/chappe-bus.db
+Environment=CHAPPE_TOKENS_DIR=/etc/chappe/tokens
+EnvironmentFile=-/etc/chappe/chappe-bus.env
+ExecStart=/usr/local/bin/chappe-bus
+Restart=on-failure
+RestartSec=5
+
+# The service reads its token files and writes one directory; nothing else.
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictNamespaces=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+SystemCallArchitectures=native
+CapabilityBoundingSet=
+
+[Install]
+WantedBy=multi-user.target

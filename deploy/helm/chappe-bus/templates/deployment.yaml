@@ -1,0 +1,122 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "chappe-bus.fullname" . }}
+  labels:
+    {{- include "chappe-bus.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  # One writer on a ReadWriteOnce volume: the old pod must stop before the new one starts.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "chappe-bus.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "chappe-bus.selectorLabels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      annotations:
+        {{- if and (not .Values.tokens.existingSecret) .Values.tokens.values }}
+        checksum/tokens: {{ toYaml .Values.tokens.values | sha256sum }}
+        {{- end }}
+        {{- if and (not .Values.webhook.existingSecret) .Values.webhook.secret }}
+        checksum/webhook: {{ .Values.webhook.secret | sha256sum }}
+        {{- end }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        runAsGroup: 65534
+        fsGroup: 65534
+        seccompProfile:
+          type: RuntimeDefault
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: chappe-bus
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: CHAPPE_LISTEN
+              value: "0.0.0.0:8080"
+            - name: CHAPPE_DB
+              value: /data/chappe-bus.db
+            - name: CHAPPE_TOKENS_DIR
+              value: /etc/chappe/tokens
+            {{- if .Values.config.projects }}
+            - name: CHAPPE_PROJECTS
+              value: {{ join "," .Values.config.projects | quote }}
+            {{- end }}
+            {{- if .Values.config.forgeUrl }}
+            - name: CHAPPE_FORGE_URL
+              value: {{ .Values.config.forgeUrl | quote }}
+            {{- end }}
+            {{- if or .Values.webhook.existingSecret .Values.webhook.secret }}
+            - name: CHAPPE_WEBHOOK_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "chappe-bus.webhookSecret" . }}
+                  key: {{ .Values.webhook.secretKey }}
+            {{- end }}
+            {{- with .Values.config.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: tokens
+              mountPath: /etc/chappe/tokens
+              readOnly: true
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 10
+            failureThreshold: 2
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ include "chappe-bus.claimName" . }}
+        - name: tokens
+          secret:
+            secretName: {{ include "chappe-bus.tokensSecret" . }}
+            defaultMode: 0440
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

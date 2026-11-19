@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- launchd agent for chappe-host (macOS). Replace USER with the account name, then:
+       cp com.example.chappe-host.plist ~/Library/LaunchAgents/
+       launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.example.chappe-host.plist
+     The token is saved as ~/.config/chappe/host-token with mode 0600. -->
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.example.chappe-host</string>
+  <key>ProgramArguments</key><array><string>/Users/USER/.local/bin/chappe-host</string></array>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <!-- The address of chappe-bus: there is no default. -->
+    <key>CHAPPE_URL</key><string>https://chappe.example.com</string>
+    <key>CHAPPE_HOST_TOKEN_FILE</key><string>/Users/USER/.config/chappe/host-token</string>
+    <key>CHAPPE_HOST_CLAUDE</key><string>/Users/USER/.local/bin/claude</string>
+    <!-- Where `which codex` says on this Mac; a launchd agent has no PATH of its own. -->
+    <key>CHAPPE_HOST_CODEX</key><string>/opt/homebrew/bin/codex</string>
+    <!-- The woken sessions inherit this PATH and need it to find `chappe`. -->
+    <key>PATH</key><string>/Users/USER/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+    <key>HOME</key><string>/Users/USER</string>
+  </dict>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+  <key>StandardErrorPath</key><string>/Users/USER/Library/Logs/chappe-host.log</string>
+</dict>
+</plist>

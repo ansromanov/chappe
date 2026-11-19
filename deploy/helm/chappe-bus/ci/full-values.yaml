@@ -1,0 +1,11 @@
+config: {projects: [all, demo], forgeUrl: "https://git.example.com"}
+tokens: {values: {"laptop.claude": "tok-0123456789abcdef0123456789abcdef"}}
+webhook: {secret: "hook-secret-0123456789"}
+ingress:
+  enabled: true
+  className: nginx
+  hosts: [chappe.example.com]
+  tls: [{secretName: chappe-tls, hosts: [chappe.example.com]}]
+  page: {annotations: {"nginx.ingress.kubernetes.io/auth-url": "https://sso.example.com/auth"}}
+networkPolicy: {enabled: true, from: [{namespaceSelector: {matchLabels: {kubernetes.io/metadata.name: ingress-nginx}}}]}
+persistence: {storageClass: fast, size: 2Gi}

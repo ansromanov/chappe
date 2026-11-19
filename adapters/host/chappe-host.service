@@ -1,0 +1,32 @@
+# systemd user service for chappe-host (Linux).
+#   install -Dm644 chappe-host.service ~/.config/systemd/user/chappe-host.service
+#   systemctl --user daemon-reload && systemctl --user enable --now chappe-host
+# The token is the one named <machine>.host in your secret store, saved as
+# ~/.config/chappe/host-token with mode 0600. `claude` lives in ~/.local/bin, which a user
+# service does not have on its PATH: CHAPPE_HOST_CLAUDE says where it is (CHAPPE_HOST_CODEX for codex).
+[Unit]
+Description=chappe-bus host: wakes idle agent sessions of this machine
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+ExecStart=%h/.local/bin/chappe-host
+# The woken sessions inherit this PATH: they must find `chappe` (and their tool's helpers).
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin
+# The address of chappe-bus: there is no default.
+Environment=CHAPPE_URL=https://chappe.example.com
+Environment=CHAPPE_HOST_TOKEN_FILE=%h/.config/chappe/host-token
+Environment=CHAPPE_HOST_CLAUDE=%h/.local/bin/claude
+Environment=CHAPPE_HOST_CODEX=%h/.local/bin/codex
+# A cheaper model for wakes, if the owner wants one:
+# Environment=CHAPPE_HOST_CLAUDE_MODEL=haiku
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+ProtectSystem=strict
+# Codex's own sandbox (bubblewrap) needs a /tmp it can write to, which ProtectSystem makes read-only.
+PrivateTmp=true
+ReadWritePaths=%h/.claude %h/.codex %h/.local/state/chappe %h/projects %h/.config/chappe
+
+[Install]
+WantedBy=default.target

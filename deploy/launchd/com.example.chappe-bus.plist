@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- launchd agent for chappe-bus (macOS).
+       install -m755 chappe-bus /usr/local/bin/chappe-bus
+       mkdir -p ~/.config/chappe/tokens ~/.local/state/chappe-bus
+       cp com.example.chappe-bus.plist ~/Library/LaunchAgents/
+       launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.example.chappe-bus.plist
+     Token files go to ~/.config/chappe/tokens, one per <machine>.<tool>. Replace
+     USER with your user name: launchd does not expand ~ or $HOME in this file. -->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.example.chappe-bus</string>
+  <key>ProgramArguments</key>
+  <array><string>/usr/local/bin/chappe-bus</string></array>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>CHAPPE_LISTEN</key><string>127.0.0.1:8080</string>
+    <key>CHAPPE_DB</key><string>/Users/USER/.local/state/chappe-bus/chappe-bus.db</string>
+    <key>CHAPPE_TOKENS_DIR</key><string>/Users/USER/.config/chappe/tokens</string>
+  </dict>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+  <key>StandardErrorPath</key><string>/Users/USER/.local/state/chappe-bus/chappe-bus.log</string>
+</dict>
+</plist>
