@@ -266,9 +266,31 @@ fn message_html(m: &Message, now: i64, follows: bool, parent: Option<&Message>) 
         iso = iso_utc(m.created_at),
         hm = format_hm(m.created_at),
         quoted = quoted,
-        text = linkify(&m.text),
+        text = message_text(m),
         ask = ask_state_line(m, now),
     )
+}
+
+/// The text of a message as HTML. The deadline of an ask is written into its text
+/// in UTC, because agents read that text; on the page the deadline is a `<time>`, so
+/// the browser shows it in the same time zone as the time of the message.
+fn message_text(m: &Message) -> String {
+    let html = linkify(&m.text);
+    let Some(by) = m.ask.as_ref().and_then(|a| a.reply_by) else {
+        return html;
+    };
+    let written = format!("Deadline: by {} UTC", format_hm(by));
+    // The deadline line comes after the fields an agent wrote: take the last one.
+    match html.rfind(&written) {
+        Some(at) => format!(
+            r#"{}Deadline: by <time datetime="{}">{} UTC</time>{}"#,
+            &html[..at],
+            iso_utc(by),
+            format_hm(by),
+            &html[at + written.len()..]
+        ),
+        None => html,
+    }
 }
 
 /// The feed of a topic: messages with a divider between days; messages of the
@@ -925,6 +947,47 @@ mod tests {
         odd.project = "a b".into();
         odd.topic = "t/1".into();
         assert!(messages_fragment(&[odd], 0).contains(r##"href="/p/a%20b/t%2F1#m7""##));
+    }
+
+    #[test]
+    fn the_deadline_of_an_ask_is_shown_in_the_time_zone_of_the_page() {
+        use crate::chat::AskInfo;
+        // Sent at 06:36 UTC with --by 30m: the text says 07:06 UTC, as agents read it.
+        let sent = 1_795_070_160;
+        let mut m = msg(
+            1,
+            "frontend-7069",
+            "Need: is it live? Deadline: by 07:06 UTC\nWhy: x\nDeadline: by 07:06 UTC",
+            sent,
+        );
+        m.kind = Kind::Ask;
+        m.ask = Some(AskInfo {
+            delivery: Some("queued".into()),
+            delivered_at: None,
+            answered_at: None,
+            reply_by: Some(sent + 1800),
+        });
+        let out = messages_fragment(&[m.clone()], sent);
+        // Like the time of the message, the deadline is a <time> the browser localizes.
+        assert!(
+            out.contains(r#"Deadline: by <time datetime="2026-11-19T07:06:00Z">07:06 UTC</time>"#),
+            "{out}"
+        );
+        // Only the line the service wrote, not the same words inside a field.
+        assert!(
+            out.contains("Need: is it live? Deadline: by 07:06 UTC\nWhy: x"),
+            "{out}"
+        );
+        assert_eq!(
+            out.matches("<time datetime=\"2026-11-19T07:06:00Z\">")
+                .count(),
+            1
+        );
+        // The text agents get is unchanged.
+        assert!(m.text.ends_with("Deadline: by 07:06 UTC"));
+        // A message without a deadline is shown as it was written.
+        let plain = msg(2, "a-1", "Deadline: by 07:06 UTC", sent);
+        assert!(!messages_fragment(&[plain], sent).contains("<time datetime=\"2026-11-19T07:06"));
     }
 
     #[test]
