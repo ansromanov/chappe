@@ -5,7 +5,7 @@
 #   docker build --target check .      fmt, clippy and tests (CI runs this first)
 #   docker build -t chappe-bus .        the image
 #   docker buildx build --platform linux/amd64,linux/arm64 -t chappe-bus .
-FROM docker.io/library/rust:1.99.1-bookworm AS base
+FROM docker.io/library/rust:1.100.0-bookworm AS base
 
 RUN apt-get update -qq \
     && apt-get install -y --no-install-recommends musl-tools \
