@@ -1,0 +1,8 @@
+# Production files that were over the limit when the gate was added.
+# Sizes can only go down: split the module, then lower or remove the entry.
+crates/chappe-bus/src/api.rs 1694
+crates/chappe-bus/src/html.rs 1411
+crates/chappe-bus/src/messaging.rs 1195
+crates/chappe-hooks/src/lib.rs 1166
+crates/chappe-bus/src/registry.rs 963
+crates/chappe-bus/src/forge.rs 947

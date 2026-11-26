@@ -10,7 +10,7 @@ use chappe_hooks::hook::run_hook;
 use chappe_hooks::{Env, run};
 use tokio::sync::watch;
 
-const GMKTEC: &str = "gmktec-token-long-enough-0123456789abcdef";
+const DEVBOX: &str = "devbox-token-long-enough-0123456789abcdef";
 const MAC: &str = "mac-token-long-enough-0123456789-ABCDEF";
 
 struct Bus {
@@ -35,7 +35,7 @@ impl Bus {
         };
         store
             .sync_tokens(&[
-                entry("host-a.claude", "host-a", "claude", GMKTEC),
+                entry("host-a.claude", "host-a", "claude", DEVBOX),
                 entry("mac.codex", "mac", "codex", MAC),
             ])
             .unwrap();
@@ -131,10 +131,10 @@ fn get(bus: &Bus, path: &str) -> String {
 #[test]
 fn two_machines_register_are_seen_and_leave() {
     let bus = Bus::start();
-    let (gmktec, mac) = (bus.env(Some(GMKTEC)), bus.env(Some(MAC)));
+    let (devbox, mac) = (bus.env(Some(DEVBOX)), bus.env(Some(MAC)));
 
     let a = chappe(
-        &gmktec,
+        &devbox,
         "register --role browser --project demo --issue 471 --branch fix/sound",
     );
     assert_eq!(a.code, 0, "{}", a.err);
@@ -149,7 +149,7 @@ fn two_machines_register_are_seen_and_leave() {
     let audio = b.out.trim().to_string();
 
     // `who` from either machine sees both, with the agent taken from the token.
-    for env in [&gmktec, &mac] {
+    for env in [&devbox, &mac] {
         let who = chappe(env, "who");
         assert_eq!(who.code, 0, "{}", who.err);
         assert!(
@@ -183,7 +183,7 @@ fn two_machines_register_are_seen_and_leave() {
 
     // Beat, with the handle from the flag or the environment.
     assert_eq!(
-        chappe(&gmktec, &format!("beat --handle {browser}")).out,
+        chappe(&devbox, &format!("beat --handle {browser}")).out,
         "ok\n"
     );
     let mut with_env = bus.env(Some(MAC));
@@ -202,13 +202,13 @@ fn two_machines_register_are_seen_and_leave() {
 
     // Leave: the record disappears from `who` and from the board.
     assert_eq!(
-        chappe(&gmktec, &format!("leave --handle {browser}")).out,
+        chappe(&devbox, &format!("leave --handle {browser}")).out,
         "ok\n"
     );
     assert!(!chappe(&mac, "who").out.contains(&browser));
     assert!(!get(&bus, "/board").contains(&browser));
     assert!(get(&bus, "/board").contains(&audio));
-    let late = chappe(&gmktec, &format!("beat --handle {browser}"));
+    let late = chappe(&devbox, &format!("beat --handle {browser}"));
     assert_eq!(late.code, 1);
     assert!(late.err.contains("register again"), "{}", late.err);
 }
@@ -216,7 +216,7 @@ fn two_machines_register_are_seen_and_leave() {
 #[test]
 fn mistakes_are_explained_and_the_token_is_never_printed() {
     let bus = Bus::start();
-    let gmktec = bus.env(Some(GMKTEC));
+    let devbox = bus.env(Some(DEVBOX));
 
     let wrong = chappe(
         &bus.env(Some("wrong-token-wrong-token-wrong-token-0000")),
@@ -229,11 +229,11 @@ fn mistakes_are_explained_and_the_token_is_never_printed() {
     assert_eq!(none.code, 1);
     assert!(none.err.contains("no token"));
 
-    let bad_role = chappe(&gmktec, "register --role Bad_Role --project demo");
+    let bad_role = chappe(&devbox, "register --role Bad_Role --project demo");
     assert_eq!(bad_role.code, 1);
     assert!(bad_role.err.contains("role"), "{}", bad_role.err);
 
-    let no_project = chappe(&gmktec, "register --role audio");
+    let no_project = chappe(&devbox, "register --role audio");
     assert_eq!(no_project.code, 2);
     assert!(no_project.err.contains("--project"));
 
@@ -241,17 +241,17 @@ fn mistakes_are_explained_and_the_token_is_never_printed() {
         "register --role audio --project demo --issue {}",
         "ab".repeat(20)
     );
-    let leaked = chappe(&gmktec, &secret);
+    let leaked = chappe(&devbox, &secret);
     assert_eq!(leaked.code, 1);
     assert!(leaked.err.contains("looks like a secret"), "{}", leaked.err);
 
     for run in [&wrong, &none, &bad_role, &no_project, &leaked] {
-        for token in [GMKTEC, MAC, "wrong-token-wrong-token-wrong-token-0000"] {
+        for token in [DEVBOX, MAC, "wrong-token-wrong-token-wrong-token-0000"] {
             assert!(!run.out.contains(token) && !run.err.contains(token));
         }
     }
     assert_eq!(
-        chappe(&gmktec, "who").out,
+        chappe(&devbox, "who").out,
         "nobody is registered\n",
         "nothing was stored"
     );
@@ -261,7 +261,7 @@ fn mistakes_are_explained_and_the_token_is_never_printed() {
 fn registering_again_with_the_same_session_id_returns_the_same_handle() {
     // A tool whose start hook fires twice must not appear twice on the board.
     let bus = Bus::start();
-    let env = bus.env(Some(GMKTEC));
+    let env = bus.env(Some(DEVBOX));
     let line = "register --role audio --project demo --session-id s-1";
     let first = chappe(&env, line).out;
     let second = chappe(&env, line).out;
@@ -272,8 +272,8 @@ fn registering_again_with_the_same_session_id_returns_the_same_handle() {
 #[test]
 fn agents_make_topics_for_parts_of_the_system_and_the_owner_sees_them() {
     let bus = Bus::start();
-    let (gmktec, mac) = (bus.env(Some(GMKTEC)), bus.env(Some(MAC)));
-    let handle = chappe(&gmktec, "register --role audio --project demo")
+    let (devbox, mac) = (bus.env(Some(DEVBOX)), bus.env(Some(MAC)));
+    let handle = chappe(&devbox, "register --role audio --project demo")
         .out
         .trim()
         .to_string();
@@ -288,7 +288,7 @@ fn agents_make_topics_for_parts_of_the_system_and_the_owner_sees_them() {
     );
 
     let made = chappe(
-        &gmktec,
+        &devbox,
         &format!("topic create audio-driver --about driver --handle {handle}"),
     );
     assert_eq!(made.code, 0, "{}", made.err);
@@ -310,17 +310,17 @@ fn agents_make_topics_for_parts_of_the_system_and_the_owner_sees_them() {
 
     // The same name twice, a bad name, general, and another machine's session.
     let twice = chappe(
-        &gmktec,
+        &devbox,
         &format!("topic create audio-driver --handle {handle}"),
     );
     assert_eq!(twice.code, 1);
     assert!(twice.err.contains("already exists"), "{}", twice.err);
     assert_eq!(
-        chappe(&gmktec, &format!("topic create a/b --handle {handle}")).code,
+        chappe(&devbox, &format!("topic create a/b --handle {handle}")).code,
         1
     );
     assert_eq!(
-        chappe(&gmktec, &format!("topic create general --handle {handle}")).code,
+        chappe(&devbox, &format!("topic create general --handle {handle}")).code,
         1
     );
     let stolen = chappe(&mac, &format!("topic create sneaky --handle {handle}"));
@@ -331,7 +331,7 @@ fn agents_make_topics_for_parts_of_the_system_and_the_owner_sees_them() {
         stolen.err
     );
     assert_eq!(
-        chappe(&gmktec, "topic create x").code,
+        chappe(&devbox, "topic create x").code,
         2,
         "a handle is needed"
     );
@@ -346,7 +346,7 @@ fn a_service_that_is_down_does_not_fail_the_agent() {
     let env = Env {
         vars: HashMap::from([
             ("CHAPPE_URL".to_string(), format!("http://{addr}")),
-            ("CHAPPE_TOKEN".to_string(), GMKTEC.to_string()),
+            ("CHAPPE_TOKEN".to_string(), DEVBOX.to_string()),
         ]),
         cwd: None,
     };
@@ -363,14 +363,14 @@ fn a_service_that_is_down_does_not_fail_the_agent() {
             "{line}: {}",
             r.err
         );
-        assert!(!r.err.contains(GMKTEC));
+        assert!(!r.err.contains(DEVBOX));
     }
 }
 
 #[test]
 fn usage_errors_exit_with_status_two() {
     let bus = Bus::start();
-    let env = bus.env(Some(GMKTEC));
+    let env = bus.env(Some(DEVBOX));
     for line in ["", "hello", "beat --nope x", "beat"] {
         assert_eq!(chappe(&env, line).code, 2, "{line:?}");
     }
@@ -391,14 +391,14 @@ const ASK: &str = r#"--what "check the sound in the browser" --why "updated the 
 #[test]
 fn both_scenarios_of_the_owner_between_two_machines() {
     let bus = Bus::start();
-    let (gmktec, mac) = (bus.env(Some(GMKTEC)), bus.env(Some(MAC)));
-    let browser = register(&gmktec, "browser", "demo");
+    let (devbox, mac) = (bus.env(Some(DEVBOX)), bus.env(Some(MAC)));
+    let browser = register(&devbox, "browser", "demo");
     let audio = register(&mac, "audio", "demo");
     let ci = register(&mac, "ci", "core");
 
     // 2. A directed request to @audio: first look, then send, then one answer.
     let look = chappe(
-        &gmktec,
+        &devbox,
         &format!("ask --to @audio {ASK} --handle {browser}"),
     );
     assert_eq!(look.code, 0, "{}", look.err);
@@ -415,7 +415,7 @@ fn both_scenarios_of_the_owner_between_two_machines() {
         "looking sends nothing"
     );
     let sent = chappe(
-        &gmktec,
+        &devbox,
         &format!("ask --to @audio {ASK} --send --handle {browser}"),
     );
     assert_eq!(sent.code, 0, "{}", sent.err);
@@ -444,7 +444,7 @@ fn both_scenarios_of_the_owner_between_two_machines() {
         answered.out,
         format!("sent #2 to {browser} in demo/general\n")
     );
-    let back = chappe(&gmktec, &format!("inbox --handle {browser}"));
+    let back = chappe(&devbox, &format!("inbox --handle {browser}"));
     assert!(
         back.out.contains("Answer: sound works")
             && back.out.contains("From ")
@@ -466,7 +466,7 @@ fn both_scenarios_of_the_owner_between_two_machines() {
     // 1. An announcement to everyone: another machine reads it at once, the one
     // that has just read its inbox waits five minutes.
     let announced = chappe(
-        &gmktec,
+        &devbox,
         &format!(
             "announce --topic laptop --what \"ready to update the kernel\" --handle {browser}"
         ),
@@ -507,12 +507,12 @@ fn both_scenarios_of_the_owner_between_two_machines() {
 #[test]
 fn what_the_rules_turn_away_is_explained_to_the_agent() {
     let bus = Bus::start();
-    let (gmktec, mac) = (bus.env(Some(GMKTEC)), bus.env(Some(MAC)));
-    let browser = register(&gmktec, "browser", "demo");
+    let (devbox, mac) = (bus.env(Some(DEVBOX)), bus.env(Some(MAC)));
+    let browser = register(&devbox, "browser", "demo");
     register(&mac, "audio", "demo");
 
     let nobody = chappe(
-        &gmktec,
+        &devbox,
         &format!("ask --to @kernel {ASK} --send --handle {browser}"),
     );
     assert_eq!(nobody.code, 1);
@@ -525,7 +525,7 @@ fn what_the_rules_turn_away_is_explained_to_the_agent() {
     );
 
     let secret = chappe(
-        &gmktec,
+        &devbox,
         &format!(
             "announce --topic laptop --what \"key {}\" --handle {browser}",
             "ab".repeat(20)
@@ -542,7 +542,7 @@ fn what_the_rules_turn_away_is_explained_to_the_agent() {
     assert!(!secret.err.contains(&"ab".repeat(20)));
 
     let wrong = chappe(
-        &gmktec,
+        &devbox,
         &format!("announce --what x --by 5m --handle {browser}"),
     );
     assert_eq!(wrong.code, 1);
@@ -553,7 +553,7 @@ fn what_the_rules_turn_away_is_explained_to_the_agent() {
     );
 
     let no_topic = chappe(
-        &gmktec,
+        &devbox,
         &format!("notice --to @audio --what x --why y --topic nope --handle {browser}"),
     );
     assert!(
@@ -565,7 +565,7 @@ fn what_the_rules_turn_away_is_explained_to_the_agent() {
     // Six messages an hour, then the reason.
     for i in 0..6 {
         let r = chappe(
-            &gmktec,
+            &devbox,
             &format!("owner --what \"question {i}\" --why w --expect e --handle {browser}"),
         );
         assert_eq!(r.code, 0, "{}", r.err);
@@ -575,7 +575,7 @@ fn what_the_rules_turn_away_is_explained_to_the_agent() {
         );
     }
     let over = chappe(
-        &gmktec,
+        &devbox,
         &format!("owner --what seventh --why w --expect e --handle {browser}"),
     );
     assert_eq!(over.code, 1);
@@ -606,7 +606,7 @@ fn what_the_rules_turn_away_is_explained_to_the_agent() {
 #[test]
 fn messages_need_a_handle_and_a_service_that_is_up() {
     let bus = Bus::start();
-    let env = bus.env(Some(GMKTEC));
+    let env = bus.env(Some(DEVBOX));
     for line in [
         "announce --what x",
         "inbox",
@@ -620,7 +620,7 @@ fn messages_need_a_handle_and_a_service_that_is_up() {
     let down = Env {
         vars: HashMap::from([
             ("CHAPPE_URL".to_string(), format!("http://{addr}")),
-            ("CHAPPE_TOKEN".to_string(), GMKTEC.to_string()),
+            ("CHAPPE_TOKEN".to_string(), DEVBOX.to_string()),
         ]),
         cwd: None,
     };
@@ -649,7 +649,7 @@ fn in_session(mut env: Env, name: &str, session_id: &str) -> Env {
 #[test]
 fn a_session_is_found_by_the_id_its_tool_gives_it_so_no_flags_are_needed() {
     let bus = Bus::start();
-    let env = in_session(bus.env(Some(GMKTEC)), "noflags", "c1d2e3f4-0001");
+    let env = in_session(bus.env(Some(DEVBOX)), "noflags", "c1d2e3f4-0001");
     let handle = register(&env, "audio", "demo");
     assert_eq!(chappe(&env, "beat").out, "ok\n", "no --handle");
     assert!(chappe(&env, "who").out.contains(&handle));
@@ -668,7 +668,7 @@ fn a_session_is_found_by_the_id_its_tool_gives_it_so_no_flags_are_needed() {
     assert_eq!(after.code, 2);
     assert!(after.err.contains("no handle"), "{}", after.err);
     // Another tool session on the same machine has its own name.
-    let other = in_session(bus.env(Some(GMKTEC)), "noflags-2", "c1d2e3f4-0002");
+    let other = in_session(bus.env(Some(DEVBOX)), "noflags-2", "c1d2e3f4-0002");
     assert_ne!(register(&other, "kernel", "demo"), handle);
 }
 
@@ -699,7 +699,7 @@ fn payload(session: &str, event: &str) -> String {
 #[test]
 fn the_hooks_of_claude_code_register_deliver_and_leave() {
     let bus = Bus::start();
-    let mut browser = in_session(bus.env(Some(GMKTEC)), "hooks", "sess-browser");
+    let mut browser = in_session(bus.env(Some(DEVBOX)), "hooks", "sess-browser");
     browser.vars.insert("CHAPPE_PROJECT".into(), "demo".into());
     browser.vars.insert("CHAPPE_ROLES".into(), "browser".into());
     let mac = bus.env(Some(MAC));
@@ -814,7 +814,7 @@ fn the_hooks_of_claude_code_register_deliver_and_leave() {
 #[test]
 fn a_hook_never_gets_in_the_agents_way() {
     let bus = Bus::start();
-    let mut env = in_session(bus.env(Some(GMKTEC)), "quiet", "sess-q");
+    let mut env = in_session(bus.env(Some(DEVBOX)), "quiet", "sess-q");
     // A project that is not set up for chappe-bus: nothing happens.
     let start = hook(&env, "SessionStart", &payload("sess-q", "SessionStart"));
     assert_eq!((start.code, start.out.as_str()), (0, ""));
@@ -955,7 +955,7 @@ fn the_service_templates_start_the_host_with_its_token_file() {
 #[test]
 fn the_doctor_checks_the_token_the_service_and_the_host_daemon_and_prints_no_token() {
     let bus = Bus::start();
-    let mut env = bus.env(Some(GMKTEC));
+    let mut env = bus.env(Some(DEVBOX));
     env.vars.insert("HOME".into(), "/nonexistent".into());
     env.vars
         .insert("CHAPPE_DOCTOR_HOOK_PATH".into(), "/nonexistent".into());
@@ -969,7 +969,7 @@ fn the_doctor_checks_the_token_the_service_and_the_host_daemon_and_prints_no_tok
         r.out
     );
     assert_eq!(r.code, 1, "something does not work");
-    assert!(!r.out.contains(GMKTEC) && !r.err.contains(GMKTEC));
+    assert!(!r.out.contains(DEVBOX) && !r.err.contains(DEVBOX));
     // A rejected token is a failure too, and it is not printed either.
     let wrong = "wrong-token-long-enough-0123456789abcdef";
     let r = chappe(&bus.env(Some(wrong)), "doctor");

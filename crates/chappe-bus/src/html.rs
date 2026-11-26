@@ -1128,7 +1128,7 @@ mod tests {
         let out = board_fragment(
             &[session("a-1", "demo", 0)],
             &[
-                lease(LeaseKind::Exclusive, "claude@gmktec", 480),
+                lease(LeaseKind::Exclusive, "claude@devbox", 480),
                 lease(LeaseKind::Using, "codex@mac", 481),
             ],
             &HashMap::new(),

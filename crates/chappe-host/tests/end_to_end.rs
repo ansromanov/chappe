@@ -14,7 +14,7 @@ use chappe_host::claude::ClaudeAdapter;
 use chappe_host::{Adapter, Host};
 use tokio::sync::watch;
 
-const GMKTEC: &str = "gmktec-claude-token-long-enough-0123456789";
+const DEVBOX: &str = "devbox-claude-token-long-enough-0123456789";
 const MAC_CLAUDE: &str = "mac-claude-token-long-enough-0123456789";
 const MAC_CODEX: &str = "mac-codex-token-long-enough-0123456789";
 const MAC_HOST: &str = "mac-host-token-long-enough-0123456789";
@@ -39,7 +39,7 @@ impl Bus {
         };
         store
             .sync_tokens(&[
-                entry("host-a.claude", "host-a", "claude", GMKTEC),
+                entry("host-a.claude", "host-a", "claude", DEVBOX),
                 entry("mac.claude", "mac", "claude", MAC_CLAUDE),
                 entry("mac.codex", "mac", "codex", MAC_CODEX),
                 entry("mac.host", "mac", "host", MAC_HOST),
@@ -181,7 +181,7 @@ fn an_idle_session_on_another_machine_is_woken_and_the_ask_reaches_it() {
     let audio = bus.session("mac", "claude", "audio", now() - 700, &worktree);
 
     let sent = bus.ask(
-        GMKTEC,
+        DEVBOX,
         &browser,
         "@audio",
         "check the sound in the browser $(id)",
@@ -245,7 +245,7 @@ fn a_session_of_a_tool_without_an_adapter_is_not_woken_and_the_sender_is_told() 
     let worktree = scratch("codex-tree");
     let browser = bus.session("host-a", "claude", "browser", now(), &worktree);
     let audio = bus.session("mac", "codex", "audio", now() - 700, &worktree);
-    bus.ask(GMKTEC, &browser, "@audio", "x");
+    bus.ask(DEVBOX, &browser, "@audio", "x");
     // The host has the Claude adapter only.
     let h = host(
         &bus,
@@ -255,7 +255,7 @@ fn a_session_of_a_tool_without_an_adapter_is_not_woken_and_the_sender_is_told() 
         )],
     );
     assert_eq!(h.work_once(0).unwrap(), 1);
-    let inbox = bus.call(GMKTEC, "/v1/inbox", &format!(r#"{{"handle":"{browser}"}}"#));
+    let inbox = bus.call(DEVBOX, "/v1/inbox", &format!(r#"{{"handle":"{browser}"}}"#));
     assert!(
         inbox.contains("has no way to wake")
             && inbox.contains(&audio)
@@ -303,7 +303,7 @@ fn a_session_held_by_a_live_process_is_not_resumed_and_the_wake_is_tried_again_l
         ),
     )
     .unwrap();
-    bus.ask(GMKTEC, &browser, "@audio", "x");
+    bus.ask(DEVBOX, &browser, "@audio", "x");
     let h = host(&bus, vec![claude_adapter(fake_claude(&work, 0), &sessions)]);
     assert_eq!(h.work_once(0).unwrap(), 1);
     assert_eq!(
@@ -334,7 +334,7 @@ fn a_failing_wake_is_reported_and_the_message_stays_queued() {
     let (work, worktree) = (scratch("fail"), scratch("fail-tree"));
     let browser = bus.session("host-a", "claude", "browser", now(), &worktree);
     let audio = bus.session("mac", "claude", "audio", now() - 700, &worktree);
-    bus.ask(GMKTEC, &browser, "@audio", "x");
+    bus.ask(DEVBOX, &browser, "@audio", "x");
     let h = host(
         &bus,
         vec![claude_adapter(

@@ -529,7 +529,7 @@ mod tests {
         }
     }
 
-    fn gmktec() -> Agent {
+    fn devbox() -> Agent {
         agent("host-a", "claude")
     }
 
@@ -551,7 +551,7 @@ mod tests {
     #[test]
     fn register_takes_machine_and_tool_from_the_token() {
         let s = store();
-        let session = s.register(&gmktec(), new("browser", "demo"), T0).unwrap();
+        let session = s.register(&devbox(), new("browser", "demo"), T0).unwrap();
         assert_eq!(
             (session.machine.as_str(), session.tool.as_str()),
             ("host-a", "claude")
@@ -567,7 +567,7 @@ mod tests {
         let s = store();
         let handles: std::collections::HashSet<_> = (0..200)
             .map(|_| {
-                s.register(&gmktec(), new("kernel", "demo"), T0)
+                s.register(&devbox(), new("kernel", "demo"), T0)
                     .unwrap()
                     .handle
             })
@@ -578,7 +578,7 @@ mod tests {
     #[test]
     fn register_validates_the_fields() {
         let s = store();
-        let err = |n: NewSession| s.register(&gmktec(), n, T0).unwrap_err().to_string();
+        let err = |n: NewSession| s.register(&devbox(), n, T0).unwrap_err().to_string();
         assert!(
             err(NewSession {
                 roles: vec![],
@@ -625,7 +625,7 @@ mod tests {
             branch: Some(" main ".into()),
             ..new("x", "demo")
         };
-        let session = s.register(&gmktec(), n, T0).unwrap();
+        let session = s.register(&devbox(), n, T0).unwrap();
         assert_eq!(session.roles, ["audio", "desktop"]);
         assert_eq!(
             (session.issue, session.branch.as_deref()),
@@ -644,7 +644,7 @@ mod tests {
                 1 => n.worktree = Some(format!("/home/x/{token}")),
                 _ => n.branch = Some("-----BEGIN OPENSSH PRIVATE KEY-----".into()),
             }
-            let err = s.register(&gmktec(), n, T0).unwrap_err().to_string();
+            let err = s.register(&devbox(), n, T0).unwrap_err().to_string();
             assert!(err.contains("looks like a secret"), "{err}");
             assert!(!err.contains(&token), "the error must not echo the value");
         }
@@ -653,7 +653,7 @@ mod tests {
             ..new("browser", "p")
         };
         assert!(
-            s.register(&gmktec(), uuid, T0).is_ok(),
+            s.register(&devbox(), uuid, T0).is_ok(),
             "a session id is not a secret"
         );
     }
@@ -666,8 +666,8 @@ mod tests {
             branch: Some(branch.into()),
             ..new("audio", "demo")
         };
-        let first = s.register(&gmktec(), n("one"), T0).unwrap();
-        let second = s.register(&gmktec(), n("two"), T0 + 60).unwrap();
+        let first = s.register(&devbox(), n("one"), T0).unwrap();
+        let second = s.register(&devbox(), n("two"), T0 + 60).unwrap();
         assert_eq!(first.handle, second.handle);
         assert_eq!(
             (second.branch.as_deref(), second.last_seen),
@@ -686,10 +686,10 @@ mod tests {
             session_id: Some("sid-1".into()),
             ..new("audio", "demo")
         };
-        let first = s.register(&gmktec(), n(), T0).unwrap();
-        s.leave(&gmktec(), &first.handle, T0 + 1).unwrap();
+        let first = s.register(&devbox(), n(), T0).unwrap();
+        s.leave(&devbox(), &first.handle, T0 + 1).unwrap();
         assert_ne!(
-            s.register(&gmktec(), n(), T0 + 2).unwrap().handle,
+            s.register(&devbox(), n(), T0 + 2).unwrap().handle,
             first.handle
         );
     }
@@ -698,16 +698,16 @@ mod tests {
     fn beat_keeps_a_session_active_and_reports_the_previous_state() {
         let s = store();
         let h = s
-            .register(&gmktec(), new("kernel", "demo"), T0)
+            .register(&devbox(), new("kernel", "demo"), T0)
             .unwrap()
             .handle;
-        assert_eq!(s.beat(&gmktec(), &h, T0 + 300).unwrap(), State::Active);
+        assert_eq!(s.beat(&devbox(), &h, T0 + 300).unwrap(), State::Active);
         let later = T0 + 300 + ACTIVE_WINDOW_SECS + 1;
         assert_eq!(
             s.sessions(Filter::default(), later).unwrap()[0].state(later),
             State::Idle
         );
-        assert_eq!(s.beat(&gmktec(), &h, later).unwrap(), State::Idle);
+        assert_eq!(s.beat(&devbox(), &h, later).unwrap(), State::Idle);
         assert_eq!(
             s.sessions(Filter::default(), later).unwrap()[0].state(later),
             State::Active
@@ -718,7 +718,7 @@ mod tests {
     fn a_session_without_signal_becomes_idle_then_disappears() {
         let s = store();
         let h = s
-            .register(&gmktec(), new("kernel", "demo"), T0)
+            .register(&devbox(), new("kernel", "demo"), T0)
             .unwrap()
             .handle;
         let idle = T0 + ACTIVE_WINDOW_SECS;
@@ -729,7 +729,7 @@ mod tests {
         let gone = T0 + GONE_AFTER_SECS;
         assert!(s.sessions(Filter::default(), gone).unwrap().is_empty());
         assert!(
-            matches!(s.beat(&gmktec(), &h, gone), Err(SessionError::Gone)),
+            matches!(s.beat(&devbox(), &h, gone), Err(SessionError::Gone)),
             "no resurrection by a late beat"
         );
     }
@@ -738,14 +738,14 @@ mod tests {
     fn leave_removes_the_session_and_is_idempotent() {
         let s = store();
         let h = s
-            .register(&gmktec(), new("kernel", "demo"), T0)
+            .register(&devbox(), new("kernel", "demo"), T0)
             .unwrap()
             .handle;
-        s.leave(&gmktec(), &h, T0 + 5).unwrap();
-        s.leave(&gmktec(), &h, T0 + 9).unwrap();
+        s.leave(&devbox(), &h, T0 + 5).unwrap();
+        s.leave(&devbox(), &h, T0 + 9).unwrap();
         assert!(s.sessions(Filter::default(), T0 + 10).unwrap().is_empty());
         assert!(matches!(
-            s.beat(&gmktec(), &h, T0 + 10),
+            s.beat(&devbox(), &h, T0 + 10),
             Err(SessionError::Gone)
         ));
     }
@@ -754,7 +754,7 @@ mod tests {
     fn only_the_owning_machine_and_tool_may_beat_or_leave() {
         let s = store();
         let h = s
-            .register(&gmktec(), new("kernel", "demo"), T0)
+            .register(&devbox(), new("kernel", "demo"), T0)
             .unwrap()
             .handle;
         for other in [agent("mac", "claude"), agent("host-a", "codex")] {
@@ -773,7 +773,7 @@ mod tests {
             "still there"
         );
         assert!(matches!(
-            s.beat(&gmktec(), "nope-0000", T0),
+            s.beat(&devbox(), "nope-0000", T0),
             Err(SessionError::NotFound)
         ));
     }
@@ -781,7 +781,7 @@ mod tests {
     #[test]
     fn who_filters_by_project_and_role_and_sorts_active_first() {
         let s = store();
-        let idle = s.register(&gmktec(), new("audio", "demo"), T0).unwrap();
+        let idle = s.register(&devbox(), new("audio", "demo"), T0).unwrap();
         let active = s
             .register(
                 &agent("mac", "codex"),
@@ -793,7 +793,7 @@ mod tests {
             )
             .unwrap();
         s.register(
-            &gmktec(),
+            &devbox(),
             new("kernel", "core"),
             T0 + 2 * ACTIVE_WINDOW_SECS,
         )
@@ -842,21 +842,21 @@ mod tests {
     fn old_records_are_deleted_on_the_next_registration() {
         let s = store();
         let left = s
-            .register(&gmktec(), new("kernel", "p"), T0)
+            .register(&devbox(), new("kernel", "p"), T0)
             .unwrap()
             .handle;
-        s.leave(&gmktec(), &left, T0).unwrap();
-        let expired = s.register(&gmktec(), new("audio", "p"), T0).unwrap().handle;
+        s.leave(&devbox(), &left, T0).unwrap();
+        let expired = s.register(&devbox(), new("audio", "p"), T0).unwrap().handle;
         let count = |s: &Store| -> i64 {
             s.conn()
                 .query_row("SELECT COUNT(*) FROM sessions", [], |r| r.get(0))
                 .unwrap()
         };
         assert_eq!(count(&s), 2);
-        s.register(&gmktec(), new("desktop", "p"), T0 + KEEP_GONE_SECS - 1)
+        s.register(&devbox(), new("desktop", "p"), T0 + KEEP_GONE_SECS - 1)
             .unwrap();
         assert_eq!(count(&s), 3, "kept for a week");
-        s.register(&gmktec(), new("ci", "p"), T0 + KEEP_GONE_SECS + 1)
+        s.register(&devbox(), new("ci", "p"), T0 + KEEP_GONE_SECS + 1)
             .unwrap();
         assert_eq!(count(&s), 2, "the left and the expired record are gone");
         assert!(
@@ -874,17 +874,17 @@ mod tests {
             ..new("audio", "demo")
         };
         let first = s
-            .register(&gmktec(), named(Some("  Graphics and sound ")), T0)
+            .register(&devbox(), named(Some("  Graphics and sound ")), T0)
             .unwrap();
         assert_eq!(first.name.as_deref(), Some("Graphics and sound"));
         // Registering again without a name keeps it; with one, replaces it.
-        let again = s.register(&gmktec(), named(None), T0 + 1).unwrap();
+        let again = s.register(&devbox(), named(None), T0 + 1).unwrap();
         assert_eq!(again.name.as_deref(), Some("Graphics and sound"));
-        let renamed = s.register(&gmktec(), named(Some("Audio")), T0 + 2).unwrap();
+        let renamed = s.register(&devbox(), named(Some("Audio")), T0 + 2).unwrap();
         assert_eq!(renamed.name.as_deref(), Some("Audio"));
-        s.set_name(&gmktec(), &first.handle, "Audio 2", T0 + 3)
+        s.set_name(&devbox(), &first.handle, "Audio 2", T0 + 3)
             .unwrap();
-        s.set_name(&gmktec(), &first.handle, "  ", T0 + 4).unwrap();
+        s.set_name(&devbox(), &first.handle, "  ", T0 + 4).unwrap();
         let loaded = load(&s.conn(), &first.handle).unwrap().unwrap();
         assert_eq!(
             loaded.name.as_deref(),
@@ -902,7 +902,7 @@ mod tests {
         let s = store();
         let err = |name: String| {
             s.register(
-                &gmktec(),
+                &devbox(),
                 NewSession {
                     name: Some(name),
                     ..new("audio", "p")
@@ -920,18 +920,18 @@ mod tests {
     #[test]
     fn a_session_says_where_it_is_now() {
         let s = store();
-        let h = s.register(&gmktec(), new("dev", "p"), T0).unwrap().handle;
+        let h = s.register(&devbox(), new("dev", "p"), T0).unwrap().handle;
         assert!(
-            s.set_place(&gmktec(), &h, Some("/w/a"), Some("claude/a"))
+            s.set_place(&devbox(), &h, Some("/w/a"), Some("claude/a"))
                 .unwrap()
         );
         assert!(
-            !s.set_place(&gmktec(), &h, Some("/w/a"), Some("claude/a"))
+            !s.set_place(&devbox(), &h, Some("/w/a"), Some("claude/a"))
                 .unwrap(),
             "nothing changed"
         );
         // An absent value keeps the old one.
-        assert!(s.set_place(&gmktec(), &h, Some("/w/b"), None).unwrap());
+        assert!(s.set_place(&devbox(), &h, Some("/w/b"), None).unwrap());
         let loaded = load(&s.conn(), &h).unwrap().unwrap();
         assert_eq!(
             (loaded.worktree.as_deref(), loaded.branch.as_deref()),
@@ -942,7 +942,7 @@ mod tests {
             Err(SessionError::Forbidden)
         ));
         assert!(
-            s.set_place(&gmktec(), &h, Some(&"x".repeat(300)), None)
+            s.set_place(&devbox(), &h, Some(&"x".repeat(300)), None)
                 .is_err()
         );
     }
@@ -952,11 +952,11 @@ mod tests {
         let s = store();
         s.ensure_projects(&["all".into()]).unwrap();
         let h = s
-            .register(&gmktec(), new("kernel", "demo"), T0)
+            .register(&devbox(), new("kernel", "demo"), T0)
             .unwrap()
             .handle;
-        s.beat(&gmktec(), &h, T0 + 1).unwrap();
-        s.leave(&gmktec(), &h, T0 + 2).unwrap();
+        s.beat(&devbox(), &h, T0 + 1).unwrap();
+        s.leave(&devbox(), &h, T0 + 2).unwrap();
         assert!(s.recent_messages("all", "general", 10).unwrap().is_empty());
         assert_eq!(s.nav().unwrap()[0].topics[0].messages, 0);
     }
