@@ -144,11 +144,11 @@ fn times_are_read_as_utc() {
 fn a_project_is_named_after_its_repository() {
     assert_eq!(project_of("acme/demo").as_deref(), Some("demo"));
     assert_eq!(
-        project_of("andrei/Fallout2_Remastered").as_deref(),
-        Some("fallout2-remastered")
+        project_of("owner/Shop_Frontend").as_deref(),
+        Some("shop-frontend")
     );
     assert_eq!(project_of("core").as_deref(), Some("core"));
-    assert_eq!(project_of("andrei/").as_deref(), None);
+    assert_eq!(project_of("owner/").as_deref(), None);
     assert_eq!(project_of("").as_deref(), None);
 }
 
@@ -535,17 +535,14 @@ fn old_records_are_forgotten() {
     );
 }
 
-const CLAIM: &str = "<!-- agent-lock: claimed -->\n**Taken.**\n\n- agent: `claude@andrei-nucboxk9`\n- worktree: `/home/andrei/projects/worktrees/core-claude-x`\n- branch: `claude/x`\n- time (UTC): 2026-11-14T07:16Z";
+const CLAIM: &str = "<!-- agent-lock: claimed -->\n**Taken.**\n\n- agent: `claude@devbox`\n- worktree: `/work/worktrees/core-claude-x`\n- branch: `claude/x`\n- time (UTC): 2026-11-14T07:16Z";
 
 #[test]
 fn a_claim_record_is_read_from_the_comment_in_either_language() {
     let c = parse_claim(CLAIM).unwrap();
     assert!(!c.released);
-    assert_eq!(c.agent.as_deref(), Some("claude@andrei-nucboxk9"));
-    assert_eq!(
-        c.worktree.as_deref(),
-        Some("/home/andrei/projects/worktrees/core-claude-x")
-    );
+    assert_eq!(c.agent.as_deref(), Some("claude@devbox"));
+    assert_eq!(c.worktree.as_deref(), Some("/work/worktrees/core-claude-x"));
     assert_eq!(c.branch.as_deref(), Some("claude/x"));
     let en = parse_claim(
         "<!-- agent-lock: claimed -->\nagent: codex@mac\nBranch: fix/y\nWorktree: /w/y\n",
@@ -584,14 +581,7 @@ fn a_claim_names_the_issue_of_its_branch_until_it_is_released() {
     let found = claim_of(Some("claude/x"), None, &claims).unwrap();
     assert_eq!((found.issue, found.merged), (618, false));
     assert_eq!(found.title, "the board shows the task itself");
-    assert!(
-        claim_of(
-            None,
-            Some("/home/andrei/projects/worktrees/core-claude-x"),
-            &claims
-        )
-        .is_some()
-    );
+    assert!(claim_of(None, Some("/work/worktrees/core-claude-x"), &claims).is_some());
     assert!(claim_of(Some("claude/other"), Some("/elsewhere"), &claims).is_none());
     assert!(claim_of(None, None, &claims).is_none());
     assert!(lines(&s, "core").is_empty(), "a claim is not posted");
@@ -605,7 +595,7 @@ fn a_claim_names_the_issue_of_its_branch_until_it_is_released() {
     )
     .unwrap();
     assert_eq!(s.claims().unwrap().len(), 1);
-    let own = "<!-- agent-lock: released -->\nagent: `claude@andrei-nucboxk9`\nreason: stop";
+    let own = "<!-- agent-lock: released -->\nagent: `claude@devbox`\nreason: stop";
     s.gitea_event(
         "issue_comment",
         "c3",

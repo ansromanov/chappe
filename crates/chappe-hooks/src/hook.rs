@@ -421,14 +421,14 @@ mod tests {
     #[test]
     fn the_project_is_the_first_directory_below_the_root() {
         let root = dir("plain");
-        for d in ["core/docs", "Fallout2_Remastered", "worktrees"] {
+        for d in ["core/docs", "Shop_Frontend", "worktrees"] {
             std::fs::create_dir_all(root.join(d)).unwrap();
         }
         assert_eq!(at(&root, "core").as_deref(), Some("core"));
         assert_eq!(at(&root, "core/docs").as_deref(), Some("core"));
         assert_eq!(
-            at(&root, "Fallout2_Remastered").as_deref(),
-            Some("fallout2-remastered"),
+            at(&root, "Shop_Frontend").as_deref(),
+            Some("shop-frontend"),
             "named as the service wants a project named"
         );
         // Outside the root, at the root itself, or a directory that is not there.
@@ -458,10 +458,7 @@ mod tests {
         assert_eq!(map_project("demox", map), "demox");
         // The first entry that matches wins; nothing matching leaves the name alone.
         assert_eq!(map_project("a-b", "a-*=first,a-b=second"), "first");
-        assert_eq!(
-            map_project("fallout2-remastered", map),
-            "fallout2-remastered"
-        );
+        assert_eq!(map_project("shop-frontend", map), "shop-frontend");
         // Rubbish entries are skipped, not trusted.
         assert_eq!(
             map_project("x-1", "x-*=Bad Name,=y,novalue,x-*=good"),
@@ -482,7 +479,7 @@ mod tests {
         // Not gathered by a prefix, not gathered at all, or no usable name left: no area.
         assert_eq!(role_of("core-worktrees", map), None);
         assert_eq!(role_of("demo", map), None);
-        assert_eq!(role_of("fallout2-remastered", map), None);
+        assert_eq!(role_of("shop-frontend", map), None);
         assert_eq!(role_of("x-2024", map), None, "a role starts with a letter");
         assert_eq!(role_of("demo-wifi", ""), None);
         let long = format!("demo-{}", "a".repeat(40));
